@@ -22,7 +22,7 @@ export const DEFAULT_CHAIN = SUPPORTED_CHAINS.ETH;
 const environment = import.meta.env.VITE_COBO_ENV || 'dev';
 
 // Debugging: Check if CoboWaas2 is properly imported
-console.log("CoboWaas2 Import:", CoboWaas2);
+console.log("CoboWaas2 Import:", Object.keys(CoboWaas2));
 
 if (!CoboWaas2?.ApiClient) {
   throw new Error("CoboWaas2.ApiClient is undefined. Check package import.");
@@ -37,6 +37,8 @@ if (environment === 'dev') {
     throw new Error("CoboWaas2.Env is undefined.");
   }
   apiClient.setEnv(CoboWaas2.Env.DEV);
+} else {
+  apiClient.setEnv(CoboWaas2.Env.PROD);
 }
 
 // Get private key from environment variables
@@ -53,19 +55,26 @@ try {
   throw error;
 }
 
-// Ensure WalletsApi exists
-if (!CoboWaas2.WalletsApi) {
-  throw new Error("CoboWaas2.WalletsApi is undefined. Check package import.");
+// Find the correct Wallets API class
+const walletApiClass = Object.keys(CoboWaas2).find(key => key.toLowerCase().includes('walletsapi'));
+
+if (!walletApiClass) {
+  throw new Error("No Wallets API class found in @cobo/cobo-waas2. Check package documentation.");
 }
 
-// Initialize Wallet API
-const walletApi = new CoboWaas2.WalletsApi();
+// Initialize Wallet API dynamically
+const WalletsApi = CoboWaas2[walletApiClass];
+const walletApi = new WalletsApi(apiClient);
 console.log("Wallet API initialized:", walletApi);
 
 // Function to generate a new wallet
 export const createWallet = async () => {
   try {
-    const opts = { CreateWalletParams: new CoboWaas2.CreateWalletParams() };
+    const opts = new CoboWaas2.CreateWalletParams();
+    opts.wallet_type = CoboWaas2.WalletType.Custodial;
+    opts.wallet_subtype = CoboWaas2.WalletSubtype.Asset;
+    opts.chain_ids = ["BTC", "ETH"]; // Use an array if required
+
     const data = await walletApi.createWallet(opts);
     console.log("Wallet created successfully:", data);
     return data;

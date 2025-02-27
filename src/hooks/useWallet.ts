@@ -3,7 +3,6 @@ import toast from 'react-hot-toast';
 import { ethers } from 'ethers';
 import { apiClient, walletApi, NETWORK_NAMES } from '../config/wallet';
 import type { WalletState, TransactionRequest, PurchaseParams } from '../types';
-import {createWallet} from "../config/wallet"
 
 // Initial state for wallet connection
 const initialWalletState: WalletState = {

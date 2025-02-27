@@ -6,7 +6,7 @@ import {createWallet} from "../config/wallet"
 import { HoverCard, HoverCardContent, HoverCardTrigger } from './ui/hover-card';
 
 export const WalletConnect: React.FC = () => {
-  const { walletState, isInitializing, connectWallet, disconnectWallet } = useWallet();
+  const { walletState, isInitializing,  disconnectWallet } = useWallet();
 
   const [walletData, setWalletData] = useState(null);
 
