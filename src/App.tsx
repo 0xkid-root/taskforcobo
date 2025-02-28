@@ -1,104 +1,93 @@
-import React, { useState } from 'react';
-import { ImageIcon, Palette } from 'lucide-react';
-import { Toaster } from 'react-hot-toast';
-import { WalletConnect } from './components/WalletConnect';
-import { ArtCard } from './components/ArtCard';
-import type { ArtPiece } from './types';
+import React, { useState, useEffect } from "react";
+import { Toaster } from "react-hot-toast";
+import { WalletConnect } from "./components/WalletConnect";
+import { ArtCard } from "./components/ArtCard";
+import Navbar from "./Navbar";
 
-const SAMPLE_ART: ArtPiece[] = [
-  {
-    id: '1',
-    title: 'Digital Dreamscape',
-    artist: 'CryptoArtist',
-    description: 'A mesmerizing blend of digital art and traditional techniques.',
-    price: '0.5',
-    imageUrl: 'https://images.unsplash.com/photo-1634017839464-5c339ebe3cb4?q=80&w=3000',
-    contractAddress: '0x1234567890123456789012345678901234567890',
-    tokenId: '1',
-  },
-  {
-    id: '2',
-    title: 'Abstract Harmony',
-    artist: 'BlockchainBrush',
-    description: 'An exploration of color and form in the digital age.',
-    price: '0.8',
-    imageUrl: 'https://images.unsplash.com/photo-1618005198919-d3d4b5a92ead?q=80&w=3000',
-    contractAddress: '0x1234567890123456789012345678901234567890',
-    tokenId: '2',
-  },
-  {
-    id: '3',
-    title: 'Cyber Renaissance',
-    artist: 'NFTMaster',
-    description: 'Where classical art meets cyberpunk aesthetics.',
-    price: '1.2',
-    imageUrl: 'https://images.unsplash.com/photo-1579783902614-a3fb3927b6a5?q=80&w=3000',
-    contractAddress: '0x1234567890123456789012345678901234567890',
-    tokenId: '3',
-  },
-];
+// Pinata Gateway URL
+const PINATA_GATEWAY_URL = "https://indigo-imperial-crawdad-414.mypinata.cloud/ipfs/";
+const CID = "bafybeicxzielubdg6gmqwvzgktctow75tkrm472rssdhyh5lmiourwkhti"; // Your CID
 
-function App() {
-  const [artworks] = useState<ArtPiece[]>(SAMPLE_ART);
-  const [isPurchasing, setIsPurchasing] = useState<string | null>(null);
+const getPinataUrl = (uri) => {
+  if (uri.startsWith("ipfs://")) {
+    return `${PINATA_GATEWAY_URL}${uri.split("ipfs://")[1]}`;
+  }
+  return uri;
+};
 
-  const handlePurchase = async (art: ArtPiece) => {
+const fetchImagesFromCID = async () => {
+  let images = [];
+
+  for (let i = 1; i <= 10; i++) {
     try {
-      setIsPurchasing(art.id);
-      const { useWallet } = await import('./hooks/useWallet');
-      const { purchaseArt } = useWallet();
-      
-      await purchaseArt({
-        artId: art.id,
-        price: art.price,
-        contractAddress: art.contractAddress,
-        tokenId: art.tokenId,
+      const response = await fetch(getPinataUrl(`ipfs://${CID}/${i}`));
+      if (!response.ok) continue;
+
+      const jsonData = await response.json();
+      console.log(`Fetched metadata for NFT #${i}:`, jsonData);
+
+      images.push({
+        title: jsonData.name || `NFT #${i}`,
+        description: jsonData.description || "No description available",
+        imageUrl: getPinataUrl(jsonData.image),
+        price: jsonData.price || "0.05",
+        artist: jsonData.artist || "Unknown",
+        attributes: jsonData.attributes || [],
       });
     } catch (error) {
-      console.error('Purchase failed:', error);
-    } finally {
-      setIsPurchasing(null);
+      console.error(`Error fetching ${i}.json`, error);
     }
+  }
+
+  return images;
+};
+
+function App() {
+  const [images, setImages] = useState([]);
+  const [isPurchasing, setIsPurchasing] = useState(false);
+
+  useEffect(() => {
+    const loadImages = async () => {
+      const pinataImages = await fetchImagesFromCID();
+      setImages(pinataImages);
+    };
+
+    loadImages();
+  }, []);
+
+  const handlePurchase = (art) => {
+    setIsPurchasing(true);
+    console.log(`Purchasing ${art.title} for ${art.price} ETH...`);
+    setTimeout(() => {
+      setIsPurchasing(false);
+      alert(`✅ Purchase Successful: ${art.title}`);
+    }, 2000);
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Toaster position="top-center" />
-      <WalletConnect />
-      
-      <header className="bg-white border-b">
-        <div className="max-w-7xl mx-auto px-4 py-6 sm:px-6 lg:px-8">
-          <div className="flex items-center gap-3">
-            <ImageIcon className="h-8 w-8 text-primary" />
-            <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary/60">
-              NFT Art Marketplace
-            </h1>
-          </div>
-        </div>
-      </header>
+    <div>
+      {/* Fixed Navbar */}
+      <div className="fixed top-0 left-0 w-full bg-white shadow-md z-50 p-4 flex justify-between items-center">
+        <WalletConnect /> {/* Wallet Connect stays on the left */}
+        <h1 className="text-2xl md:text-3xl font-bold text-right">NFT Marketplace</h1>
+      </div>
 
-      <main className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
+      {/* Spacing for content below the fixed navbar */}
+      <div className="pt-24 p-5">
+        <Toaster />
+
+        {/* NFT Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {artworks.map((art) => (
-            <ArtCard 
-              key={art.id} 
-              art={art} 
+          {images.map((art, index) => (
+            <ArtCard
+              key={index}
+              art={art}
               onPurchase={() => handlePurchase(art)}
-              isPurchasing={isPurchasing === art.id}
+              isPurchasing={isPurchasing}
             />
           ))}
         </div>
-
-        {artworks.length === 0 && (
-          <div className="text-center py-12">
-            <Palette className="mx-auto h-12 w-12 text-muted-foreground" />
-            <h3 className="mt-2 text-sm font-semibold">No artworks</h3>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Get started by creating a new listing.
-            </p>
-          </div>
-        )}
-      </main>
+      </div>
     </div>
   );
 }
